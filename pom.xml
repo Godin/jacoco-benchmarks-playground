@@ -64,6 +64,39 @@
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-test-resources</id>
+            <phase>generate-test-resources</phase>
+            <goals>
+              <goal>copy</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>com.google.guava</groupId>
+                  <artifactId>guava</artifactId>
+                  <version>18.0</version>
+                  <type>jar</type>
+                  <destFileName>guava.jar</destFileName>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.elasticsearch</groupId>
+                  <artifactId>elasticsearch</artifactId>
+                  <version>1.1.2</version>
+                  <type>jar</type>
+                  <destFileName>elasticsearch.jar</destFileName>
+                </artifactItem>
+              </artifactItems>
+              <outputDirectory>${project.build.directory}/projects</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
         <executions>
           <execution>
