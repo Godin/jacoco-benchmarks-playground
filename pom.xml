@@ -27,7 +27,7 @@
   <description>JaCoCo Benchmarks</description>
 
   <properties>
-    <jmh.version>1.6.3</jmh.version>
+    <jmh.version>1.9.3</jmh.version>
   </properties>
 
   <dependencies>
