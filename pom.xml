@@ -15,7 +15,7 @@
   <parent>
     <groupId>org.jacoco</groupId>
     <artifactId>org.jacoco.build</artifactId>
-    <version>0.7.5-SNAPSHOT</version>
+    <version>0.7.8-SNAPSHOT</version>
     <!--
     <relativePath>../org.jacoco.build</relativePath>
     -->
@@ -27,7 +27,7 @@
   <description>JaCoCo Benchmarks</description>
 
   <properties>
-    <jmh.version>1.9.3</jmh.version>
+    <jmh.version>1.12</jmh.version>
   </properties>
 
   <dependencies>

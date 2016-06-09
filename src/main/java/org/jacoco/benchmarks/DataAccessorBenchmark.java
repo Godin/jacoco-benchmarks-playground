@@ -11,6 +11,7 @@
  *******************************************************************************/
 package org.jacoco.benchmarks;
 
+import org.jacoco.core.runtime.IRuntime;
 import org.jacoco.core.runtime.LoggerRuntime;
 import org.jacoco.core.runtime.ModifiedSystemClassRuntime;
 import org.jacoco.core.runtime.RuntimeData;
@@ -25,7 +26,12 @@ import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.concurrent.TimeUnit;
 
@@ -35,75 +41,115 @@ import java.util.concurrent.TimeUnit;
 @BenchmarkMode(Mode.AverageTime)
 @Warmup(iterations = 5)
 @Measurement(iterations = 5)
-public abstract class DataAccessorBenchmark {
+public class DataAccessorBenchmark {
 
-  private DataAccessor dataAccessor;
+  private DataAccessor direct;
+
+  private IRuntime fastRuntime = new ModifiedSystemClassRuntime(ModifiedClass1.class, "accessField");
+  private DataAccessor fast;
+
+  private IRuntime modifiedSystemClassRuntime = new ModifiedSystemClassRuntime(ModifiedClass2.class, "accessField");
+  private DataAccessor modifiedSystemClass;
+
+  private IRuntime systemPropertiesRuntime = new SystemPropertiesRuntime();
+  private DataAccessor systemProperties;
+
+  private IRuntime loggerRuntime = new LoggerRuntime();
+  private DataAccessor logger;
+
+  private IRuntime streamHandlerRuntime = new URLStreamHandlerRuntime();
+  private DataAccessor streamHandler;
 
   @Setup
   public void setup() throws Exception {
-    dataAccessor = createDataAccessor();
+    direct = new DataAccessor.Direct(new RuntimeData());
+
+    modifiedSystemClassRuntime.startup(new RuntimeData());
+    modifiedSystemClass = DataAccessor.createFor(modifiedSystemClassRuntime);
+
+    fastRuntime.startup(new RuntimeDataWithoutCompatibilityCheck());
+    fast = DataAccessor.createFor(fastRuntime);
+
+    systemPropertiesRuntime.startup(new RuntimeData());
+    systemProperties = DataAccessor.createFor(systemPropertiesRuntime);
+
+    loggerRuntime.startup(new RuntimeData());
+    logger = DataAccessor.createFor(loggerRuntime);
+
+    streamHandlerRuntime.startup(new RuntimeData());
+    streamHandler = DataAccessor.createFor(streamHandlerRuntime);
   }
 
-  protected abstract DataAccessor createDataAccessor() throws Exception;
+  @TearDown
+  public void tearDown() {
+    systemPropertiesRuntime.shutdown();
+    loggerRuntime.shutdown();
+    streamHandlerRuntime.shutdown();
+    modifiedSystemClassRuntime.shutdown();
+  }
+
+  public static class ModifiedClass1 {
+    /**
+     * This static member emulate the instrumented system class.
+     */
+    @SuppressWarnings("UnusedDeclaration")
+    public static Object accessField;
+  }
+
+  public static class ModifiedClass2 {
+    /**
+     * This static member emulate the instrumented system class.
+     */
+    @SuppressWarnings("UnusedDeclaration")
+    public static Object accessField;
+  }
 
   @Benchmark
-  public boolean[] getData() {
-    return dataAccessor.getData();
+  public boolean[] noOp() {
+    return null;
   }
 
-  public static class NoOp extends DataAccessorBenchmark {
-    @Override
-    protected DataAccessor createDataAccessor() throws Exception {
-      return null;
-    }
-
-    @Override
-    public boolean[] getData() {
-      return null;
-    }
+  @Benchmark
+  public boolean[] direct() {
+    return direct.getData();
   }
 
-  public static class DirectAccess extends DataAccessorBenchmark {
-    @Override
-    protected DataAccessor createDataAccessor() throws Exception {
-      return new DataAccessor.Direct(new RuntimeData());
-    }
+  @Benchmark
+  public boolean[] fast() {
+    return fast.getData();
   }
 
-  public static class ModifiedSystemClass extends DataAccessorBenchmark {
-    @Override
-    protected DataAccessor createDataAccessor() throws Exception {
-      return DataAccessor.generateFor(new ModifiedSystemClassRuntime(ModifiedClass.class, "accessField"));
-    }
-
-    public static class ModifiedClass {
-      /**
-       * This static member emulate the instrumented system class.
-       */
-      @SuppressWarnings("UnusedDeclaration")
-      public static Object accessField;
-    }
+  @Benchmark
+  public boolean[] modifiedSystemClass() {
+    return modifiedSystemClass.getData();
   }
 
-  public static class URLStreamHandler extends DataAccessorBenchmark {
-    @Override
-    protected DataAccessor createDataAccessor() throws Exception {
-      return DataAccessor.generateFor(new URLStreamHandlerRuntime());
-    }
+//  @Benchmark
+  public boolean[] systemProperties() {
+    return systemProperties.getData();
   }
 
-  public static class SystemProperties extends DataAccessorBenchmark {
-    @Override
-    protected DataAccessor createDataAccessor() throws Exception {
-      return DataAccessor.generateFor(new SystemPropertiesRuntime());
-    }
+//  @Benchmark
+  public boolean[] logger() {
+    return logger.getData();
   }
 
-  public static class Logger extends DataAccessorBenchmark {
-    @Override
-    protected DataAccessor createDataAccessor() throws Exception {
-      return DataAccessor.generateFor(new LoggerRuntime());
-    }
+//  @Benchmark
+  public boolean[] streamHandler() {
+    return streamHandler.getData();
+  }
+
+  public static void main(String[] args) throws RunnerException {
+    System.out.println(System.getProperty("java.runtime.name") + ", " + System.getProperty("java.runtime.version"));
+    System.out.println(System.getProperty("java.vm.name") + ", " + System.getProperty("java.vm.version"));
+    System.out.println(System.getProperty("os.name") + ", " + System.getProperty("os.version") + ", " + System.getProperty("os.arch"));
+    // (Godin): This value may change during a particular invocation of the virtual machine:
+    System.out.println(Runtime.getRuntime().availableProcessors() + " available processors");
+
+    Options options = new OptionsBuilder()
+      .include(DataAccessorBenchmark.class.getName())
+      .build();
+    new Runner(options).run();
   }
 
 }

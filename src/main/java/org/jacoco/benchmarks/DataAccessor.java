@@ -26,11 +26,19 @@ public abstract class DataAccessor {
   private static final String CLASS_NAME = "org/jacoco/test/targets/DataAccessor";
   private static final int PROBES_COUNT = 2;
 
+  /**
+   * Returns a reference to the probe array.
+   *
+   * @return the probe array
+   */
   public abstract boolean[] getData();
 
-  public static DataAccessor generateFor(IRuntime runtime) throws Exception {
-    runtime.startup(new RuntimeData());
-
+  /**
+   * See org.jacoco.core.runtime.RuntimeTestBase#generateAndInstantiateClass
+   *
+   * @return instance of created class
+   */
+  public static DataAccessor createFor(IRuntime runtime) {
     final ClassWriter writer = new ClassWriter(0);
     writer.visit(
       Opcodes.V1_5, Opcodes.ACC_PUBLIC, CLASS_NAME, null,
@@ -64,7 +72,13 @@ public abstract class DataAccessor {
     writer.visitEnd();
 
     final TargetLoader loader = new TargetLoader();
-    return (DataAccessor) loader.add(CLASS_NAME.replace('/', '.'), writer.toByteArray()).newInstance();
+    try {
+      return (DataAccessor) loader.add(CLASS_NAME.replace('/', '.'), writer.toByteArray()).newInstance();
+    } catch (InstantiationException e) {
+      throw new RuntimeException(e);
+    } catch (IllegalAccessException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public static class Direct extends DataAccessor {
